@@ -1,0 +1,34 @@
+controller:
+  serviceType: LoadBalancer
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  installPlugins:
+    - kubernetes:latest
+    - workflow-aggregator:latest
+    - git:latest
+    - configuration-as-code:latest
+    - amazon-ecr:latest
+    - pipeline-aws:latest
+
+agent:
+  enabled: true
+  defaultsProviderTemplate: ""
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:debug
+      command: /busybox/cat
+      tty: true
+    - name: git
+      image: alpine/git:latest
+      command: cat
+      tty: true
+
+persistence:
+  enabled: true
+  size: 8Gi
+  storageClass: gp2

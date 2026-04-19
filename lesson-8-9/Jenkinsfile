@@ -1,0 +1,88 @@
+pipeline {
+  agent {
+    kubernetes {
+      yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command:
+    - /busybox/cat
+    tty: true
+    volumeMounts:
+    - name: kaniko-secret
+      mountPath: /kaniko/.docker
+  - name: git
+    image: alpine/git:latest
+    command:
+    - cat
+    tty: true
+  volumes:
+  - name: kaniko-secret
+    secret:
+      secretName: ecr-credentials
+      items:
+      - key: .dockerconfigjson
+        path: config.json
+"""
+    }
+  }
+
+  environment {
+    ECR_REPO     = "${env.ECR_REPOSITORY_URL}"
+    AWS_REGION   = "${env.AWS_REGION}"
+    IMAGE_TAG    = "${BUILD_NUMBER}"
+    GITHUB_REPO  = "https://github.com/riko1212/devops-homework.git"
+    VALUES_FILE  = "lesson-8-9/charts/django-app/values.yaml"
+  }
+
+  stages {
+    stage('Build & Push to ECR') {
+      steps {
+        container('kaniko') {
+          sh """
+            /kaniko/executor \
+              --context=dir://lesson-4 \
+              --dockerfile=lesson-4/Dockerfile \
+              --destination=${ECR_REPO}:${IMAGE_TAG} \
+              --destination=${ECR_REPO}:latest
+          """
+        }
+      }
+    }
+
+    stage('Update values.yaml') {
+      steps {
+        container('git') {
+          withCredentials([usernamePassword(
+            credentialsId: 'github-credentials',
+            usernameVariable: 'GIT_USER',
+            passwordVariable: 'GIT_TOKEN'
+          )]) {
+            sh """
+              git config --global user.email "andriidanylko12@gmail.com"
+              git config --global user.name "Andrii Danylko"
+              git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/riko1212/devops-homework.git repo
+              cd repo
+              sed -i "s|tag:.*|tag: ${IMAGE_TAG}|" ${VALUES_FILE}
+              git add ${VALUES_FILE}
+              git commit -m "CI: update image tag to ${IMAGE_TAG}"
+              git push origin main
+            """
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "Pipeline completed. Image: ${ECR_REPO}:${IMAGE_TAG}"
+    }
+    failure {
+      echo "Pipeline failed at build #${BUILD_NUMBER}"
+    }
+  }
+}
