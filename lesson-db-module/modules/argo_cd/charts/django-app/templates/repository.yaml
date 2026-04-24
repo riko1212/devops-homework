@@ -1,0 +1,13 @@
+{{- range .Values.repositories }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-{{ .url | sha256sum | trunc 8 }}
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: {{ .type }}
+  url: {{ .url }}
+---
+{{- end }}
