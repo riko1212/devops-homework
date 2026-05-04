@@ -1,0 +1,14 @@
+applications:
+  - name: django-app
+    namespace: default
+    repoURL: https://github.com/riko1212/devops-homework.git
+    chartPath: lesson-db-module/charts/django-app
+    targetRevision: final-project
+    syncPolicy:
+      automated:
+        prune: true
+        selfHeal: true
+
+repositories:
+  - url: https://github.com/riko1212/devops-homework.git
+    type: git

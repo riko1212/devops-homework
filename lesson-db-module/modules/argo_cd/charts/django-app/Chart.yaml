@@ -1,0 +1,5 @@
+apiVersion: v2
+name: django-app-argocd
+description: Helm chart for Argo CD Application and Repository resources
+type: application
+version: 0.1.0
